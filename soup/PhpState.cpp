@@ -1,5 +1,7 @@
 #include "PhpState.hpp"
 
+#include <cstring>
+
 #include "LangDesc.hpp"
 #include "LangVm.hpp"
 #include "ParseError.hpp"
@@ -24,11 +26,6 @@ NAMESPACE_SOUP
 		OP_REQUIRE,
 		OP_ECHO,
 	};
-
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wstring-compare"
-#endif
 	[[nodiscard]] static LangDesc getLangDescImpl()
 	{
 		LangDesc ld;
@@ -50,7 +47,7 @@ NAMESPACE_SOUP
 				var_name_literal = std::move(node);
 				node = ps.popRighthand();
 			}
-			if (static_cast<LexemeNode*>(node.get())->lexeme.token_keyword != "(")
+			if (std::strcmp(static_cast<LexemeNode*>(node.get())->lexeme.token_keyword, "(") != 0)
 			{
 				std::string err = "'function' expected righthand '(', found ";
 				err.append(node->toString());
@@ -160,7 +157,7 @@ NAMESPACE_SOUP
 			ps.setOp(OP_IF);
 			auto node = ps.popRighthand();
 			if (node->type != astNode::LEXEME
-				|| static_cast<LexemeNode*>(node.get())->lexeme.token_keyword != "("
+				|| std::strcmp(static_cast<LexemeNode*>(node.get())->lexeme.token_keyword, "(") != 0
 				)
 			{
 				std::string err = "'if' expected righthand '(', found ";
@@ -311,13 +308,13 @@ NAMESPACE_SOUP
 		auto i = ls.begin();
 		for (; i != ls.end(); )
 		{
-			if (i->token_keyword == "<?php")
+			if (std::strcmp(i->token_keyword, "<?php") == 0)
 			{
 				i = ls.erase(i);
 				processNonPhpmodeBuffer(ls, i, non_phpmode_buffer);
 				for (; i != ls.end(); )
 				{
-					if (i->token_keyword == "?>")
+					if (std::strcmp(i->token_keyword, "?>") == 0)
 					{
 						i = ls.erase(i);
 						break;
@@ -333,9 +330,6 @@ NAMESPACE_SOUP
 		}
 		processNonPhpmodeBuffer(ls, i, non_phpmode_buffer);
 	}
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
 
 	std::string PhpState::evaluate(const std::string& code, unsigned int max_require_depth) const
 	{

@@ -5,10 +5,6 @@
 #include "os.hpp"
 #include "structing.hpp"
 
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunused-private-field"
-#endif
 struct ListEntry
 {
 	uintptr_t Flink;
@@ -34,15 +30,22 @@ struct LdrDataTableEntry // https://www.geoffchappell.com/studies/windows/km/nto
 	/* 0x58 */ UNICODE_STRING BaseDllName;
 };
 static_assert(sizeof(LdrDataTableEntry) == 0x68);
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
 
 NAMESPACE_SOUP
 {
 	void ModuleHider::enable(HMODULE mod)
 	{
 		return enable(reinterpret_cast<void*>(mod));
+	}
+
+	[[nodiscard]] static constexpr uintptr_t getOffsetOfInLoadOrderLinks() noexcept
+	{
+		return 0x10; // Documented offset for InLoadOrderLinks
+	}
+
+	[[nodiscard]] static constexpr uintptr_t getOffsetOfInMemoryOrderLinks() noexcept
+	{
+		return 0x20; // Documented offset for InMemoryOrderLinks
 	}
 
 	[[nodiscard]] static LdrDataTableEntry* getLdrDataTableEntryFromLink(uintptr_t link, uintptr_t offset)
@@ -73,30 +76,16 @@ NAMESPACE_SOUP
 		}
 	}
 
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Winvalid-offsetof"
-#endif
 	void ModuleHider::enable(void* base_addr)
 	{
 		const auto Ldr = reinterpret_cast<PebLdrData*>(os::getCurrentPeb()->Ldr);
 		if (Ldr->Length == 88)
 		{
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winvalid-offsetof"
-#endif
-			hideInLinkedList(base_addr, InLoadOrderModuleList_links, InLoadOrderModuleList_pNext, &Ldr->InLoadOrderModuleList.Flink, offsetof(LdrDataTableEntry, InLoadOrderLinks));
-			hideInLinkedList(base_addr, InMemoryOrderModuleList_links, InMemoryOrderModuleList_pNext, &Ldr->InMemoryOrderModuleList.Flink, offsetof(LdrDataTableEntry, InMemoryOrderLinks));
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC diagnostic pop
-#endif
-			//hideInLinkedList(base_addr, InInitializationOrderModuleList_links, InInitializationOrderModuleList_pNext, &Ldr->InInitializationOrderModuleList.Flink, offsetof(LdrDataTableEntry, InInitializationOrderLinks));
+			hideInLinkedList(base_addr, InLoadOrderModuleList_links, InLoadOrderModuleList_pNext, &Ldr->InLoadOrderModuleList.Flink, getOffsetOfInLoadOrderLinks());
+			hideInLinkedList(base_addr, InMemoryOrderModuleList_links, InMemoryOrderModuleList_pNext, &Ldr->InMemoryOrderModuleList.Flink, getOffsetOfInMemoryOrderLinks());
+			//hideInLinkedList(base_addr, InInitializationOrderModuleList_links, InInitializationOrderModuleList_pNext, &Ldr->InInitializationOrderModuleList.Flink, getOffsetOfInInitializationOrderLinks());
 		}
 	}
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
 
 	void ModuleHider::disable()
 	{

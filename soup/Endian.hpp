@@ -11,10 +11,6 @@
 
 NAMESPACE_SOUP
 {
-#if defined(__GNUC__) || defined(__clang__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wmultichar"
-#endif
 	enum Endian : bool
 	{
 		ENDIAN_LITTLE = true,
@@ -29,9 +25,6 @@ NAMESPACE_SOUP
 
 #if __BYTE_ORDER__ != __ORDER_LITTLE_ENDIAN__ // Native endian is not little endian?
 	static_assert(__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__); // Then it should be big endian.
-#endif
-#if defined(__GNUC__) || defined(__clang__)
-#pragma GCC diagnostic pop
 #endif
 
 	SOUP_INT_STRUCT(native_u16_t, uint16_t);
